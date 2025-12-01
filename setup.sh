@@ -11,6 +11,12 @@ if ! command -v aws &> /dev/null; then
     exit 1
 fi
 
+# Check if AWS_PROFILE is set
+if [ -z "$AWS_PROFILE" ]; then
+    echo "❌ AWS_PROFILE environment variable is not set."
+    exit 1
+fi
+
 # Check AWS credentials
 if ! aws sts get-caller-identity &> /dev/null; then
     echo "❌ AWS credentials not configured. Run 'aws sso login' first."
@@ -81,10 +87,10 @@ echo ""
 # Step 5: Create .env file
 echo "📝 Creating .env file..."
 cat > .env <<EOF
+export AWS_PROFILE=$AWS_PROFILE
 export SNS_TOPIC_ARN=$SNS_TOPIC_ARN
 export SQS_QUEUE_URL=$SQS_QUEUE_URL
 EOF
-
 echo "   .env file created"
 echo ""
 
@@ -118,7 +124,16 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "To run the example:"
-echo "  source .env && cargo run"
+echo "  ./run.sh"
+echo ""
+echo "To run publisher only:"
+echo "  ./run-publisher.sh"
+echo ""
+echo "To run consumer only:"
+echo "  ./run-consumer.sh"
+echo ""
+echo "⚠️  Note: If you get authentication errors, run:"
+echo "  aws sso login --profile $AWS_PROFILE"
 echo ""
 echo "To cleanup resources, run:"
 echo "  ./cleanup.sh"
