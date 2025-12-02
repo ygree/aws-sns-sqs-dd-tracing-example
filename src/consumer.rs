@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use aws_sdk_sqs::Client as SqsClient;
 use serde::{Deserialize, Serialize};
+use std::io::{self, Write};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -91,6 +92,4 @@ async fn main() -> Result<()> {
         }
     }
 }
-
-use std::io::{self, Write};
 
