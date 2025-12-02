@@ -9,5 +9,5 @@ if [ ! -f .env ]; then
 fi
 
 # Source .env and run consumer
-set -a && source .env && set +a && cargo run --bin consumer
+set -a && source .env && set +a && DD_SERVICE="sns-consumer" cargo run --bin consumer
 

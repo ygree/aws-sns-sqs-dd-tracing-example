@@ -1,5 +1,3 @@
-/// Standalone SNS Publisher with OpenTelemetry tracing
-/// Run with: cargo run --bin publisher
 use anyhow::{Context, Result};
 use aws_sdk_sns::Client as SnsClient;
 use opentelemetry::trace::{Tracer, TraceContextExt};

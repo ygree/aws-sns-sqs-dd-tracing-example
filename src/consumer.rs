@@ -1,9 +1,11 @@
-/// Standalone SQS Consumer
-/// Run with: cargo run --bin consumer
-use anyhow::{Context, Result};
+use anyhow::{Context as AnyhowContext, Result};
 use aws_sdk_sqs::Client as SqsClient;
+use opentelemetry::trace::{TraceContextExt, Tracer};
+use opentelemetry::{global, Context};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::io::{self, Write};
+use std::process;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -16,19 +18,33 @@ struct Message {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize the Datadog OpenTelemetry tracer
+    let tracer_provider = datadog_opentelemetry::tracing().init();
+    let tracer = global::tracer("my-sqs-consumer");
+
     println!("📥 SQS Consumer");
     println!("===============\n");
 
     let config = aws_config::load_from_env().await;
     let client = SqsClient::new(&config);
 
-    let queue_url = std::env::var("SQS_QUEUE_URL")
+    let queue_url = env::var("SQS_QUEUE_URL")
         .context("SQS_QUEUE_URL environment variable not set")?;
 
     println!("📌 Consuming from: {}", queue_url);
     println!("🔄 Polling for messages... (Press Ctrl+C to stop)\n");
 
     let mut message_count = 0;
+
+    // Set up Ctrl+C handler for graceful shutdown
+    ctrlc::set_handler(move || {
+        println!("\n👋 Shutting down gracefully...");
+        tracer_provider
+            .shutdown_with_timeout(Duration::from_secs(5))
+            .expect("Failed to shutdown tracer provider");
+        println!("✅ Shutdown complete");
+        process::exit(0);
+    })?;
 
     loop {
         match client
@@ -44,7 +60,12 @@ async fn main() -> Result<()> {
                     if !messages.is_empty() {
                         for msg in messages {
                             message_count += 1;
-                            
+
+                            // Create a span for processing this message
+                            let span = tracer.start("sqs.process");
+                            let cx = Context::current_with_span(span);
+                            let _guard = cx.attach();
+
                             if let Some(body) = msg.body() {
                                 // Parse SNS envelope
                                 if let Ok(sns_envelope) = serde_json::from_str::<serde_json::Value>(body) {
