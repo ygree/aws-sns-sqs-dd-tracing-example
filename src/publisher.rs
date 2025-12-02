@@ -1,9 +1,12 @@
-/// Standalone SNS Publisher
+/// Standalone SNS Publisher with OpenTelemetry tracing
 /// Run with: cargo run --bin publisher
 use anyhow::{Context, Result};
 use aws_sdk_sns::Client as SnsClient;
+use opentelemetry::global;
+use opentelemetry::trace::{TraceContextExt, Tracer};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
+use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -14,6 +17,12 @@ struct Message {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize the Datadog OpenTelemetry tracer
+    let tracer_provider = datadog_opentelemetry::tracing().init();
+    // global::set_tracer_provider(tracer_provider.clone()); // TODO is this needed?
+    // let tracer = tracer_provider.tracer("sns-publisher");
+    let tracer = global::tracer("my-sns-publisher");
+
     println!("📤 SNS Publisher");
     println!("================\n");
 
@@ -52,6 +61,11 @@ async fn main() -> Result<()> {
 
         let message_body = serde_json::to_string(&message)?;
 
+        // Create a span for the publish operation
+        let span = tracer.start("sns.publish");
+        let cx = opentelemetry::Context::current_with_span(span);
+        let _guard = cx.attach();
+
         match client
             .publish()
             .topic_arn(&topic_arn)
@@ -73,6 +87,10 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Shutdown the tracer provider to flush any remaining spans
+    tracer_provider
+        .shutdown_with_timeout(Duration::from_secs(5))
+        .context("Failed to shutdown tracer provider")?;
+
     Ok(())
 }
-
