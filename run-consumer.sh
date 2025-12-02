@@ -9,5 +9,5 @@ if [ ! -f .env ]; then
 fi
 
 # Source .env and run consumer
-source .env && cargo run --bin consumer
+set -a && source .env && set +a && cargo run --bin consumer
 

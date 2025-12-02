@@ -9,5 +9,5 @@ if [ ! -f .env ]; then
 fi
 
 # Source .env and run publisher
-source .env && cargo run --bin publisher
+set -a && source .env && set +a && cargo run --bin publisher
 

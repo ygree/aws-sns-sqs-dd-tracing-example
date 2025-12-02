@@ -9,5 +9,5 @@ if [ ! -f .env ]; then
 fi
 
 # Source .env and run cargo
-source .env && cargo run "$@"
+set -a && source .env && set +a && cargo run "$@"
 

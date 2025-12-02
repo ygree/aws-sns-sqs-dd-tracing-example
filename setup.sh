@@ -87,9 +87,9 @@ echo ""
 # Step 5: Create .env file
 echo "📝 Creating .env file..."
 cat > .env <<EOF
-export AWS_PROFILE=$AWS_PROFILE
-export SNS_TOPIC_ARN=$SNS_TOPIC_ARN
-export SQS_QUEUE_URL=$SQS_QUEUE_URL
+AWS_PROFILE=$AWS_PROFILE
+SNS_TOPIC_ARN=$SNS_TOPIC_ARN
+SQS_QUEUE_URL=$SQS_QUEUE_URL
 EOF
 echo "   .env file created"
 echo ""
