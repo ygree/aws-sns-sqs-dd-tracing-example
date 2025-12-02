@@ -28,5 +28,4 @@ chrono = "0.4"
 ctrlc = "3.4"
 datadog-opentelemetry = "0.2.0"
 opentelemetry = "0.31"
-opentelemetry_sdk = "0.31"
 
