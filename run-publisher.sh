@@ -9,5 +9,5 @@ if [ ! -f .env ]; then
 fi
 
 # Source .env and run publisher
-set -a && source .env && set +a && cargo run --bin publisher
+set -a && source .env && set +a && DD_SERVICE="sns-publisher" cargo run --bin publisher
 

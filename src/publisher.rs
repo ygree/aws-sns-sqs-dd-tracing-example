@@ -2,8 +2,7 @@
 /// Run with: cargo run --bin publisher
 use anyhow::{Context, Result};
 use aws_sdk_sns::Client as SnsClient;
-use opentelemetry::global;
-use opentelemetry::trace::{TraceContextExt, Tracer};
+use opentelemetry::trace::{Tracer, TraceContextExt};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::time::Duration;
@@ -19,9 +18,7 @@ struct Message {
 async fn main() -> Result<()> {
     // Initialize the Datadog OpenTelemetry tracer
     let tracer_provider = datadog_opentelemetry::tracing().init();
-    // global::set_tracer_provider(tracer_provider.clone()); // TODO is this needed?
-    // let tracer = tracer_provider.tracer("sns-publisher");
-    let tracer = global::tracer("my-sns-publisher");
+    let tracer = opentelemetry::global::tracer("my-sns-publisher"); // this is not service name but set to the otel.scope.name tag
 
     println!("📤 SNS Publisher");
     println!("================\n");
