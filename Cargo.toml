@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "opentelemetry-aws-messaging"]
+
 [package]
 name = "sns-sqs-example"
 version = "0.1.0"
@@ -28,4 +31,5 @@ chrono = "0.4"
 ctrlc = "3.4"
 datadog-opentelemetry = "0.2.0"
 opentelemetry = "0.31"
+opentelemetry-aws-messaging = { path = "opentelemetry-aws-messaging" }
 

@@ -1,0 +1,19 @@
+[package]
+name = "opentelemetry-aws-messaging"
+version = "0.1.0"
+edition = "2021"
+description = "OpenTelemetry context propagation carriers for AWS SNS and SQS"
+license = "Apache-2.0"
+
+[features]
+default = ["sns", "sqs"]
+sns = ["dep:aws-sdk-sns"]
+sqs = ["dep:aws-sdk-sqs"]
+
+[dependencies]
+opentelemetry = "0.31"
+
+# AWS SDK dependencies (optional, enabled by features)
+aws-sdk-sns = { version = "1", optional = true }
+aws-sdk-sqs = { version = "1", optional = true }
+

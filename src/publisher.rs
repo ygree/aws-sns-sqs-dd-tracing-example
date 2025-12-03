@@ -1,28 +1,12 @@
 use anyhow::{Context, Result};
-use aws_sdk_sns::types::MessageAttributeValue;
 use aws_sdk_sns::Client as SnsClient;
 use opentelemetry::global;
-use opentelemetry::propagation::Injector;
 use opentelemetry::trace::{TraceContextExt, Tracer};
+use opentelemetry_aws_messaging::SnsMessageAttributesInjector;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::time::Duration;
-
-struct SnsMessageAttributesInjector<'a>(&'a mut HashMap<String, MessageAttributeValue>);
-
-impl Injector for SnsMessageAttributesInjector<'_> {
-    fn set(&mut self, key: &str, value: String) {
-        self.0.insert(
-            key.to_string(),
-            MessageAttributeValue::builder()
-                .data_type("String")
-                .string_value(value)
-                .build()
-                .unwrap(),
-        );
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {

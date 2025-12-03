@@ -1,9 +1,8 @@
 use anyhow::{Context as AnyhowContext, Result};
-use aws_sdk_sqs::types::MessageAttributeValue;
 use aws_sdk_sqs::Client as SqsClient;
 use opentelemetry::global;
-use opentelemetry::propagation::Extractor;
 use opentelemetry::trace::{SpanKind, TraceContextExt, Tracer};
+use opentelemetry_aws_messaging::SqsMessageAttributesExtractor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -11,18 +10,6 @@ use std::io::{self, Write};
 use std::process;
 use std::time::Duration;
 use tokio::time::sleep;
-
-struct SqsMessageAttributesExtractor<'a>(&'a HashMap<String, MessageAttributeValue>);
-
-impl Extractor for SqsMessageAttributesExtractor<'_> {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.0.get(key).and_then(|v| v.string_value())
-    }
-
-    fn keys(&self) -> Vec<&str> {
-        self.0.keys().map(|s| s.as_str()).collect()
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
