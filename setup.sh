@@ -68,8 +68,9 @@ SUBSCRIPTION_ARN=$(aws sns subscribe \
 
 echo "   Subscription ARN: $SUBSCRIPTION_ARN"
 
-# Enable RawMessageDelivery to propagate trace context via message attributes. Otherwise, the message will be published to SQS wrapped, 
-# which makes the attributes part of the message content rather than the envelope.
+# Enable RawMessageDelivery to use the recommended out-of-band approach, passing trace context via message attributes instead of the message body.
+# Otherwise, SNS uses the default in-band approach, wrapping the message and serializing attributes into the body.
+# This breaks distributed tracing, as trace context is expected out-of-band when extracting from SQS messages.
 aws sns set-subscription-attributes \
     --subscription-arn "$SUBSCRIPTION_ARN" \
     --attribute-name RawMessageDelivery \
