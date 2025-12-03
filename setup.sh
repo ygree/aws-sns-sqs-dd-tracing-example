@@ -29,8 +29,12 @@ echo ""
 # Step 1: Create SQS Queue
 echo "📦 Creating SQS queue..."
 QUEUE_NAME="apm-idm-yg-queue"
-SQS_QUEUE_URL=$(aws sqs create-queue --queue-name $QUEUE_NAME --query 'QueueUrl' --output text 2>/dev/null || \
-                aws sqs get-queue-url --queue-name $QUEUE_NAME --query 'QueueUrl' --output text)
+if SQS_QUEUE_URL=$(aws sqs create-queue --queue-name $QUEUE_NAME --query 'QueueUrl' --output text 2>&1); then
+    echo "   Queue created"
+else
+    echo "   Queue may already exist, getting URL..."
+    SQS_QUEUE_URL=$(aws sqs get-queue-url --queue-name $QUEUE_NAME --query 'QueueUrl' --output text)
+fi
 
 echo "   Queue URL: $SQS_QUEUE_URL"
 
@@ -63,6 +67,13 @@ SUBSCRIPTION_ARN=$(aws sns subscribe \
     --output text 2>/dev/null || echo "Already subscribed")
 
 echo "   Subscription ARN: $SUBSCRIPTION_ARN"
+
+# Enable RawMessageDelivery to propagate trace context via message attributes. Otherwise, the message will be published to SQS wrapped, 
+# which makes the attributes part of the message content rather than the envelope.
+aws sns set-subscription-attributes \
+    --subscription-arn "$SUBSCRIPTION_ARN" \
+    --attribute-name RawMessageDelivery \
+    --attribute-value true
 echo ""
 
 # Step 4: Set Queue Policy

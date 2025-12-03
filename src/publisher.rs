@@ -1,9 +1,28 @@
 use anyhow::{Context, Result};
+use aws_sdk_sns::types::MessageAttributeValue;
 use aws_sdk_sns::Client as SnsClient;
-use opentelemetry::trace::{Tracer, TraceContextExt};
+use opentelemetry::global;
+use opentelemetry::propagation::Injector;
+use opentelemetry::trace::{TraceContextExt, Tracer};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{self, Write};
 use std::time::Duration;
+
+struct SnsMessageAttributesInjector<'a>(&'a mut HashMap<String, MessageAttributeValue>);
+
+impl Injector for SnsMessageAttributesInjector<'_> {
+    fn set(&mut self, key: &str, value: String) {
+        self.0.insert(
+            key.to_string(),
+            MessageAttributeValue::builder()
+                .data_type("String")
+                .string_value(value)
+                .build()
+                .unwrap(),
+        );
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -59,6 +78,19 @@ async fn main() -> Result<()> {
         // Create a span for the publish operation
         let span = tracer.start("sns.publish");
         let cx = opentelemetry::Context::current_with_span(span);
+
+        // Inject trace context into message attributes
+        let mut attributes = HashMap::new();
+        global::get_text_map_propagator(|propagator| {
+            propagator.inject_context(&cx, &mut SnsMessageAttributesInjector(&mut attributes));
+        });
+
+        // Debug: print injected attributes
+        println!("   [debug] Injected attributes:");
+        for (k, v) in &attributes {
+            println!("      {}: {:?}", k, v.string_value());
+        }
+
         let _guard = cx.attach();
 
         match client
@@ -66,6 +98,7 @@ async fn main() -> Result<()> {
             .topic_arn(&topic_arn)
             .message(&message_body)
             .subject(format!("Message {}", message_id))
+            .set_message_attributes(Some(attributes))
             .send()
             .await
         {

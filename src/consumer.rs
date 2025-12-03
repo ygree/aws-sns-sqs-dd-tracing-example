@@ -1,13 +1,28 @@
 use anyhow::{Context as AnyhowContext, Result};
+use aws_sdk_sqs::types::MessageAttributeValue;
 use aws_sdk_sqs::Client as SqsClient;
-use opentelemetry::trace::{TraceContextExt, Tracer};
-use opentelemetry::{global, Context};
+use opentelemetry::global;
+use opentelemetry::propagation::Extractor;
+use opentelemetry::trace::{SpanKind, TraceContextExt, Tracer};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
 use std::io::{self, Write};
 use std::process;
 use std::time::Duration;
 use tokio::time::sleep;
+
+struct SqsMessageAttributesExtractor<'a>(&'a HashMap<String, MessageAttributeValue>);
+
+impl Extractor for SqsMessageAttributesExtractor<'_> {
+    fn get(&self, key: &str) -> Option<&str> {
+        self.0.get(key).and_then(|v| v.string_value())
+    }
+
+    fn keys(&self) -> Vec<&str> {
+        self.0.keys().map(|s| s.as_str()).collect()
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -52,6 +67,7 @@ async fn main() -> Result<()> {
             .queue_url(&queue_url)
             .max_number_of_messages(10)
             .wait_time_seconds(20) // Long polling
+            .message_attribute_names("All")
             .send()
             .await
         {
@@ -61,27 +77,36 @@ async fn main() -> Result<()> {
                         for msg in messages {
                             message_count += 1;
 
-                            // Create a span for processing this message
-                            let span = tracer.start("sqs.process");
-                            let cx = Context::current_with_span(span);
+                            // Debug: inspect what SQS message provides
+                            println!("   [debug] msg.message_attributes().is_some(): {}", msg.message_attributes().is_some());
+
+                            // Extract trace context from SQS message attributes
+                            let empty = HashMap::new();
+                            let attrs = msg.message_attributes().unwrap_or(&empty);
+
+                            let parent_cx = global::get_text_map_propagator(|propagator| {
+                                propagator.extract(&SqsMessageAttributesExtractor(attrs))
+                            });
+
+                            let parent_span_ctx = parent_cx.span().span_context().clone();
+                            println!("   [debug] Parent context valid: {}", parent_span_ctx.is_valid());
+
+                            let span = tracer
+                                .span_builder("sqs.process")
+                                .with_kind(SpanKind::Consumer)
+                                .start_with_context(&tracer, &parent_cx);
+                            let cx = parent_cx.with_span(span);
                             let _guard = cx.attach();
 
                             if let Some(body) = msg.body() {
-                                // Parse SNS envelope
-                                if let Ok(sns_envelope) = serde_json::from_str::<serde_json::Value>(body) {
-                                    if let Some(message_str) = sns_envelope.get("Message").and_then(|m| m.as_str()) {
-                                        match serde_json::from_str::<Message>(message_str) {
-                                            Ok(message) => {
-                                                println!("📨 [{}] Received: {}", message_count, message.content);
-                                                println!("   ID: {}, Timestamp: {}", message.id, message.timestamp);
-                                            }
-                                            Err(_) => {
-                                                println!("📨 [{}] Received: {}", message_count, message_str);
-                                            }
-                                        }
+                                match serde_json::from_str::<Message>(body) {
+                                    Ok(message) => {
+                                        println!("📨 [{}] Received: {}", message_count, message.content);
+                                        println!("   ID: {}, Timestamp: {}", message.id, message.timestamp);
                                     }
-                                } else {
-                                    println!("📨 [{}] Raw message: {}", message_count, body);
+                                    Err(_) => {
+                                        println!("📨 [{}] Received: {}", message_count, body);
+                                    }
                                 }
                             }
 
