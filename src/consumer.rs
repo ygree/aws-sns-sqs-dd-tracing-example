@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     println!("📥 SQS Consumer");
     println!("===============\n");
 
-    let config = aws_config::load_from_env().await;
+    let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let client = SqsClient::new(&config);
 
     let queue_url = env::var("SQS_QUEUE_URL")

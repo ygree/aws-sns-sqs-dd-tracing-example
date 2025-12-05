@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     println!("📤 SNS Producer");
     println!("================\n");
 
-    let config = aws_config::load_from_env().await;
+    let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
     let client = SnsClient::new(&config);
 
     let topic_arn = std::env::var("SNS_TOPIC_ARN")
