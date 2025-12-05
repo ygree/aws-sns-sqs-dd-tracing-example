@@ -6,6 +6,7 @@ use opentelemetry_aws_messaging::SnsMessageAttributesInjector;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::process;
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -32,20 +33,25 @@ async fn main() -> Result<()> {
 
     println!("📌 Publishing to: {}\n", topic_arn);
 
+    // Set up Ctrl+C handler for graceful shutdown
+    ctrlc::set_handler(move || {
+        println!("\n👋 Shutting down gracefully...");
+        tracer_provider
+            .shutdown_with_timeout(Duration::from_secs(5))
+            .expect("Failed to shutdown tracer provider");
+        println!("✅ Shutdown complete");
+        process::exit(0);
+    })?;
+
     let mut message_id = 1;
 
     loop {
-        print!("Enter message (or 'quit' to exit): ");
+        print!("Enter message (Press Ctrl+C to stop): ");
         io::stdout().flush()?;
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
         let input = input.trim();
-
-        if input.eq_ignore_ascii_case("quit") {
-            println!("👋 Goodbye!");
-            break;
-        }
 
         if input.is_empty() {
             continue;
@@ -98,11 +104,4 @@ async fn main() -> Result<()> {
             }
         }
     }
-
-    // Shutdown the tracer provider to flush any remaining spans
-    tracer_provider
-        .shutdown_with_timeout(Duration::from_secs(5))
-        .context("Failed to shutdown tracer provider")?;
-
-    Ok(())
 }
