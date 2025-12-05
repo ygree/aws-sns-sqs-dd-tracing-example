@@ -32,4 +32,7 @@ ctrlc = "3.4"
 datadog-opentelemetry = "0.2.0"
 opentelemetry = "0.31"
 opentelemetry-aws-messaging = { path = "opentelemetry-aws-messaging" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-opentelemetry = "0.32"
 

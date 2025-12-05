@@ -1,7 +1,7 @@
 use anyhow::{Context as AnyhowContext, Result};
 use aws_sdk_sqs::Client as SqsClient;
 use opentelemetry::global;
-use opentelemetry::trace::{SpanKind, TraceContextExt, Tracer};
+use opentelemetry::trace::{TraceContextExt, TracerProvider};
 use opentelemetry_aws_messaging::SqsMessageAttributesExtractor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,6 +10,8 @@ use std::io::{self, Write};
 use std::process;
 use std::time::Duration;
 use tokio::time::sleep;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -20,9 +22,10 @@ struct Message {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize the Datadog OpenTelemetry tracer
     let tracer_provider = datadog_opentelemetry::tracing().init();
-    let tracer = global::tracer("my-sqs-consumer");
+    tracing_subscriber::registry()
+        .with(tracing_opentelemetry::layer().with_tracer(tracer_provider.tracer("my-sqs-consumer")))
+        .init();
 
     println!("📥 SQS Consumer");
     println!("===============\n");
@@ -78,12 +81,10 @@ async fn main() -> Result<()> {
                             let parent_span_ctx = parent_cx.span().span_context().clone();
                             println!("   [debug] Parent context valid: {}", parent_span_ctx.is_valid());
 
-                            let span = tracer
-                                .span_builder("sqs.process")
-                                .with_kind(SpanKind::Consumer)
-                                .start_with_context(&tracer, &parent_cx);
-                            let cx = parent_cx.with_span(span);
-                            let _guard = cx.attach();
+                            // Create span using tracing and set parent context from SQS message
+                            let span = tracing::info_span!("sqs.process");
+                            let _ = span.set_parent(parent_cx);
+                            let _guard = span.enter();                         
 
                             if let Some(body) = msg.body() {
                                 match serde_json::from_str::<Message>(body) {

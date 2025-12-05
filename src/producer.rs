@@ -1,13 +1,15 @@
 use anyhow::{Context, Result};
 use aws_sdk_sns::Client as SnsClient;
 use opentelemetry::global;
-use opentelemetry::trace::{TraceContextExt, Tracer};
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_aws_messaging::SnsMessageAttributesInjector;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::process;
 use std::time::Duration;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -18,9 +20,10 @@ struct Message {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize the Datadog OpenTelemetry tracer
     let tracer_provider = datadog_opentelemetry::tracing().init();
-    let tracer = opentelemetry::global::tracer("my-sns-producer"); // this is not service name but set to the otel.scope.name tag
+    tracing_subscriber::registry()
+        .with(tracing_opentelemetry::layer().with_tracer(tracer_provider.tracer("my-sns-producer")))
+        .init();
 
     println!("📤 SNS Producer");
     println!("================\n");
@@ -65,12 +68,13 @@ async fn main() -> Result<()> {
 
         let message_body = serde_json::to_string(&message)?;
 
-        // Create a span for the publish operation
-        let span = tracer.start("sns.publish");
-        let cx = opentelemetry::Context::current_with_span(span);
+        // Create a span for the publish operation using tracing
+        let span = tracing::info_span!("sns.publish");
+        let _guard = span.enter();
 
         // Inject trace context into message attributes
         let mut attributes = HashMap::new();
+        let cx = tracing::Span::current().context();
         global::get_text_map_propagator(|propagator| {
             propagator.inject_context(&cx, &mut SnsMessageAttributesInjector(&mut attributes));
         });
@@ -80,8 +84,6 @@ async fn main() -> Result<()> {
         for (k, v) in &attributes {
             println!("      {}: {:?}", k, v.string_value());
         }
-
-        let _guard = cx.attach();
 
         match client
             .publish()
