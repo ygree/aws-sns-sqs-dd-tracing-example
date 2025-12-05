@@ -2,6 +2,9 @@
 
 A Rust example demonstrating AWS SNS → SQS messaging with OpenTelemetry distributed tracing propagated via message attributes. Traces are sent to Datadog.
 
+<img width="1044" height="84" alt="image" src="https://github.com/user-attachments/assets/76c22795-7cae-4fad-ab32-89f6090f6e9c" />
+
+
 ## Overview
 
 This project includes:
