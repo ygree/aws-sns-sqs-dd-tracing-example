@@ -65,6 +65,7 @@ Type messages in the producer terminal and see them received in the consumer wit
 | `SNS_TOPIC_ARN` | ARN of the SNS topic (set by setup.sh) |
 | `SQS_QUEUE_URL` | URL of the SQS queue (set by setup.sh) |
 | `DD_SERVICE` | Datadog service name (set by run scripts) |
+| `DD_LOG_LEVEL` | Set to `DEBUG` to enable verbose logging from the Datadog tracing library |
 
 ## Scripts
 
