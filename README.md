@@ -26,8 +26,7 @@ export AWS_PROFILE=your-profile
 ```
 
 This creates:
-- An SNS topic (`apm-idm-yg-topic`)
-- An SQS queue (`apm-idm-yg-queue`)  
+- An SNS topic and SQS queue (names defined in `setup.sh`)
 - A subscription linking them (with raw message delivery enabled)
 - A `.env` file with the resource ARNs
 

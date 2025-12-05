@@ -28,7 +28,7 @@ echo ""
 
 # Step 1: Create SQS Queue
 echo "📦 Creating SQS queue..."
-QUEUE_NAME="apm-idm-yg-queue"
+QUEUE_NAME="sns-sqs-example-queue"
 if SQS_QUEUE_URL=$(aws sqs create-queue --queue-name $QUEUE_NAME --query 'QueueUrl' --output text 2>&1); then
     echo "   Queue created"
 else
@@ -50,7 +50,7 @@ echo ""
 
 # Step 2: Create SNS Topic
 echo "📢 Creating SNS topic..."
-TOPIC_NAME="apm-idm-yg-topic"
+TOPIC_NAME="sns-sqs-example-topic"
 SNS_TOPIC_ARN=$(aws sns create-topic --name $TOPIC_NAME --query 'TopicArn' --output text 2>/dev/null || \
                 aws sns list-topics --query "Topics[?contains(TopicArn, '$TOPIC_NAME')].TopicArn" --output text | head -1)
 
