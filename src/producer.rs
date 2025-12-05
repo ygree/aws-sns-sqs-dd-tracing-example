@@ -20,9 +20,9 @@ struct Message {
 async fn main() -> Result<()> {
     // Initialize the Datadog OpenTelemetry tracer
     let tracer_provider = datadog_opentelemetry::tracing().init();
-    let tracer = opentelemetry::global::tracer("my-sns-publisher"); // this is not service name but set to the otel.scope.name tag
+    let tracer = opentelemetry::global::tracer("my-sns-producer"); // this is not service name but set to the otel.scope.name tag
 
-    println!("📤 SNS Publisher");
+    println!("📤 SNS Producer");
     println!("================\n");
 
     let config = aws_config::load_from_env().await;
@@ -105,3 +105,4 @@ async fn main() -> Result<()> {
         }
     }
 }
+

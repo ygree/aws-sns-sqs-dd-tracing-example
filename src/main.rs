@@ -12,13 +12,13 @@ struct Message {
     timestamp: String,
 }
 
-/// Publisher that sends messages to SNS topic
-struct SnsPublisher {
+/// Producer that sends messages to SNS topic
+struct SnsProducer {
     client: SnsClient,
     topic_arn: String,
 }
 
-impl SnsPublisher {
+impl SnsProducer {
     fn new(client: SnsClient, topic_arn: String) -> Self {
         Self { client, topic_arn }
     }
@@ -133,7 +133,7 @@ async fn main() -> Result<()> {
     println!("📌 SNS Topic ARN: {}", topic_arn);
     println!("📌 SQS Queue URL: {}\n", queue_url);
 
-    let publisher = SnsPublisher::new(sns_client, topic_arn);
+    let producer = SnsProducer::new(sns_client, topic_arn);
     let consumer = SqsConsumer::new(sqs_client, queue_url);
 
     // Publish some test messages
@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
             content: format!("Test message number {}", i),
             timestamp: chrono::Utc::now().to_rfc3339(),
         };
-        publisher.publish_message(&message).await?;
+        producer.publish_message(&message).await?;
         sleep(Duration::from_millis(500)).await;
     }
 

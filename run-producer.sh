@@ -8,6 +8,6 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Source .env and run publisher
-set -a && source .env && set +a && DD_SERVICE="sns-publisher" cargo run --bin publisher
+# Source .env and run producer
+set -a && source .env && set +a && DD_SERVICE="sns-producer" cargo run --bin producer
 

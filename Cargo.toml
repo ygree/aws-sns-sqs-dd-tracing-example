@@ -12,8 +12,8 @@ name = "sns-sqs-example"
 path = "src/main.rs"
 
 [[bin]]
-name = "publisher"
-path = "src/publisher.rs"
+name = "producer"
+path = "src/producer.rs"
 
 [[bin]]
 name = "consumer"
