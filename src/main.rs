@@ -120,7 +120,9 @@ async fn main() -> Result<()> {
     println!("🚀 SNS/SQS Example Application\n");
 
     // Load AWS configuration
-    let config = aws_config::load_from_env().await;
+    let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .load()
+        .await;
     let sns_client = SnsClient::new(&config);
     let sqs_client = SqsClient::new(&config);
 
